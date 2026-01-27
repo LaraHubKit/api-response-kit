@@ -1,0 +1,67 @@
+{
+    "name": "larahub/api-response-kit",
+    "description": "A Laravel package to standardize API responses, errors, and validation outputs across Laravel applications",
+    "keywords": [
+        "laravel",
+        "api",
+        "response",
+        "json",
+        "rest",
+        "standardization",
+        "error-handling",
+        "validation",
+        "larahub"
+    ],
+    "homepage": "https://www.larahub.io",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "LaraHub",
+            "email": "support@larahub.io",
+            "homepage": "https://www.larahub.io"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/contracts": "^10.0|^11.0",
+        "illuminate/http": "^10.0|^11.0",
+        "illuminate/support": "^10.0|^11.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LaraHub\\ApiResponseKit\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LaraHub\\ApiResponseKit\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LaraHub\\ApiResponseKit\\ApiResponseKitServiceProvider"
+            ],
+            "aliases": {
+                "ApiResponseKit": "LaraHub\\ApiResponseKit\\Facades\\ApiResponseKit"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
