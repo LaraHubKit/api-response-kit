@@ -5,6 +5,17 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Auto Middleware Registration
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the package will automatically register its middleware
+    | alias (api-response-kit) and can optionally push it globally.
+    |
+    */
+    'auto_middleware' => env('API_RESPONSE_KIT_AUTO_MIDDLEWARE', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Response Keys Configuration
     |--------------------------------------------------------------------------
     |

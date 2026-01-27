@@ -55,7 +55,7 @@ class ApiResponseKitServiceProvider extends ServiceProvider
     {
         // Merge package configuration
         $this->mergeConfigFrom(
-            __DIR__ . '/Config/api-response-kit.php',
+            __DIR__ . '/../config/api-response-kit.php',
             'api-response-kit'
         );
 
@@ -167,29 +167,47 @@ class ApiResponseKitServiceProvider extends ServiceProvider
             ], 'api-response-kit-config');
         }
 
-        // Register middleware
-        $this->registerMiddleware();
+        // Auto-register middleware (configurable)
+        if (config('api-response-kit.auto_middleware', true)) {
+            $this->registerApiMiddleware();
+        }
     }
 
     /**
-     * Register the middleware.
+     * Register the middleware (backwards compatible wrapper).
      *
      * @return void
      */
     protected function registerMiddleware(): void
     {
+        $this->registerApiMiddleware();
+    }
+
+    /**
+     * Auto-register the package middleware.
+     *
+     * Registers an alias (`api-response-kit`) and optionally pushes it
+     * to the global middleware stack based on config.
+     *
+     * @return void
+     */
+    protected function registerApiMiddleware(): void
+    {
+        /** @var ConfigResolver $config */
         $config = $this->app->make(ConfigResolver::class);
 
-        if ($config->isMiddlewareEnabled()) {
-            // Register middleware alias
-            $router = $this->app['router'];
-            $router->aliasMiddleware('api-response-kit', ApiResponseKitMiddleware::class);
+        if (!$config->isMiddlewareEnabled()) {
+            return;
+        }
 
-            // Optionally push to global middleware stack
-            if ($config->get('middleware.global', false)) {
-                $kernel = $this->app->make(Kernel::class);
-                $kernel->pushMiddleware(ApiResponseKitMiddleware::class);
-            }
+        // Register middleware alias
+        $router = $this->app['router'];
+        $router->aliasMiddleware('api-response-kit', ApiResponseKitMiddleware::class);
+
+        // Optionally push to global middleware stack
+        if ($config->get('middleware.global', false)) {
+            $kernel = $this->app->make(Kernel::class);
+            $kernel->pushMiddleware(ApiResponseKitMiddleware::class);
         }
     }
 
