@@ -95,6 +95,33 @@ class ResponseSchema
     }
 
     /**
+     * Build a paginated response schema.
+     *
+     * Pagination metadata is hoisted into the meta block under the
+     * "pagination" key; the data key contains only the page items.
+     *
+     * @param array<mixed> $items The items for the current page
+     * @param array<string, mixed> $pagination Pagination metadata
+     * @param string|null $message The success message
+     * @param array<string, mixed> $additionalMeta Additional metadata
+     * @return array<string, mixed>
+     */
+    public function buildPaginated(array $items, array $pagination, ?string $message = null, array $additionalMeta = []): array
+    {
+        $keys = $this->config->getKeys();
+
+        $meta = $this->buildMeta($additionalMeta);
+        $meta['pagination'] = $pagination;
+
+        return [
+            $keys['success'] => true,
+            $keys['message'] => $message ?? $this->config->getDefaultMessage(),
+            $keys['data'] => $items,
+            $keys['meta'] => $meta,
+        ];
+    }
+
+    /**
      * Build the metadata array.
      *
      * @param array<string, mixed> $additional Additional metadata to merge

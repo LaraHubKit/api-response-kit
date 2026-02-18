@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Facade;
  * Provides a static interface to the ApiResponseKit service.
  *
  * @method static \Illuminate\Http\JsonResponse success(mixed $data = null, ?string $message = null, int $statusCode = 200, array $meta = [])
+ * @method static \Illuminate\Http\JsonResponse paginated(\Illuminate\Pagination\LengthAwarePaginator|\Illuminate\Pagination\CursorPaginator $paginator, ?string $message = null, array $meta = [])
+ * @method static int perPage()
  * @method static \Illuminate\Http\JsonResponse error(string $message, mixed $errors = null, int $statusCode = 500, array $meta = [])
  * @method static \Illuminate\Http\JsonResponse validationError(array $errors, string $message = 'Validation failed', array $meta = [])
  * @method static \Illuminate\Http\JsonResponse exception(\Throwable $exception, array $meta = [])

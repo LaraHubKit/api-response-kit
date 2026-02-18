@@ -212,6 +212,16 @@ class ConfigResolver
     }
 
     /**
+     * Get the default number of items per page for pagination.
+     *
+     * @return int
+     */
+    public function getDefaultPerPage(): int
+    {
+        return (int) $this->get('pagination.per_page', 10);
+    }
+
+    /**
      * Check if the middleware is enabled.
      *
      * @return bool

@@ -144,6 +144,11 @@ class ApiResponseKitMiddleware
 
         // Determine if this is a success or error response based on status code
         if ($statusCode >= 200 && $statusCode < 300) {
+            // Detect a serialised LengthAwarePaginator or CursorPaginator payload
+            if (is_array($data) && $this->isPaginatorPayload($data)) {
+                return $this->formatPaginatedPayload($data);
+            }
+
             return $this->apiResponseKit->success($data, null, $statusCode);
         }
 
@@ -193,5 +198,66 @@ class ApiResponseKitMiddleware
         }
 
         return $this->config->getStatusMessage($statusCode, 'An error occurred');
+    }
+
+    /**
+     * Detect whether the decoded response payload is a serialised paginator.
+     *
+     * Laravel serialises both LengthAwarePaginator (has current_page + total)
+     * and CursorPaginator (has next_cursor key) to JSON automatically.
+     *
+     * @param array<string, mixed> $data
+     * @return bool
+     */
+    protected function isPaginatorPayload(array $data): bool
+    {
+        // LengthAwarePaginator: has data array + current_page + total
+        if (isset($data['data'], $data['current_page'], $data['total']) && is_array($data['data'])) {
+            return true;
+        }
+
+        // CursorPaginator: has data array + next_cursor / prev_cursor keys
+        if (isset($data['data']) && is_array($data['data']) && array_key_exists('next_cursor', $data)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Reformat a serialised paginator payload into the standard paginated shape.
+     *
+     * @param array<string, mixed> $data
+     * @return JsonResponse
+     */
+    protected function formatPaginatedPayload(array $data): JsonResponse
+    {
+        $items = array_values((array) $data['data']);
+
+        // Build pagination metadata depending on paginator type
+        if (isset($data['total'])) {
+            $pagination = [
+                'current_page'  => $data['current_page'] ?? null,
+                'last_page'     => $data['last_page'] ?? null,
+                'per_page'      => $data['per_page'] ?? null,
+                'total'         => $data['total'] ?? null,
+                'from'          => $data['from'] ?? null,
+                'to'            => $data['to'] ?? null,
+                'next_page_url' => $data['next_page_url'] ?? null,
+                'prev_page_url' => $data['prev_page_url'] ?? null,
+            ];
+        } else {
+            $pagination = [
+                'per_page'      => $data['per_page'] ?? null,
+                'next_cursor'   => $data['next_cursor'] ?? null,
+                'prev_cursor'   => $data['prev_cursor'] ?? null,
+                'next_page_url' => $data['next_page_url'] ?? null,
+                'prev_page_url' => $data['prev_page_url'] ?? null,
+            ];
+        }
+
+        $responseData = $this->apiResponseKit->getSchema()->buildPaginated($items, $pagination);
+
+        return new JsonResponse($responseData, 200);
     }
 }

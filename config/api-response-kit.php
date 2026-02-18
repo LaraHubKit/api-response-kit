@@ -5,6 +5,20 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Pagination Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure default pagination behavior. The per_page value is used as
+    | the default number of items per page when paginating query results.
+    | Developers can override this per-call: paginate(15)
+    |
+    */
+    'pagination' => [
+        'per_page' => env('API_RESPONSE_KIT_PER_PAGE', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Auto Middleware Registration
     |--------------------------------------------------------------------------
     |

@@ -20,6 +20,7 @@ A Laravel package to standardize API responses, errors, and validation outputs a
 | Feature | Description |
 |---|---|
 | Automatic response formatting | Wraps controller return values (arrays, models, collections) into standard JSON |
+| Pagination support | Auto-detects `paginate()` / `cursorPaginate()` results and moves pagination metadata into `meta.pagination` |
 | Global error handling | Converts exceptions into standardized JSON error responses (404, 403, 401, 500, etc.) |
 | Validation error standardization | Formats Laravel validation errors into a clean, predictable structure |
 | Configurable response schema | Customize response keys via config file |
@@ -103,6 +104,93 @@ When middleware is enabled, normal controller returns are automatically wrapped 
 // Controller action — no changes needed
 return User::query()->latest()->paginate();
 ```
+
+---
+
+## Pagination
+
+### Auto-detection (middleware)
+
+When the middleware is enabled, any `paginate()` or `cursorPaginate()` return value is automatically detected and reformatted. No changes needed in the controller:
+
+```php
+// Default per_page comes from config (default: 10)
+return User::query()->latest()->paginate();
+
+// Developer-defined per_page
+return User::query()->latest()->paginate(15);
+
+// Cursor pagination is also supported
+return User::query()->latest()->cursorPaginate(10);
+```
+
+### Paginated response schema
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    { "id": 1, "name": "Alice" },
+    { "id": 2, "name": "Bob" }
+  ],
+  "meta": {
+    "request_id": "LH-XXXXXX",
+    "timestamp": "2026-01-27T12:00:00Z",
+    "pagination": {
+      "current_page": 1,
+      "last_page": 5,
+      "per_page": 10,
+      "total": 50,
+      "from": 1,
+      "to": 10,
+      "next_page_url": "https://example.com/api/users?page=2",
+      "prev_page_url": null
+    }
+  }
+}
+```
+
+### Manual usage (Facade)
+
+```php
+use LaraHub\ApiResponseKit\Facades\ApiResponseKit;
+
+return ApiResponseKit::paginated(
+    User::query()->latest()->paginate(15),
+    'Users fetched successfully'
+);
+```
+
+### Using the config per_page helper
+
+Keep your per-page number in one place — `config/api-response-kit.php`:
+
+```php
+// Returns the value of pagination.per_page (default: 10)
+return ApiResponseKit::paginated(
+    User::query()->latest()->paginate(ApiResponseKit::perPage())
+);
+```
+
+### Configuration
+
+Publish the config and adjust the default:
+
+```php
+// config/api-response-kit.php
+'pagination' => [
+    'per_page' => env('API_RESPONSE_KIT_PER_PAGE', 10),
+],
+```
+
+Or set it in `.env`:
+
+```env
+API_RESPONSE_KIT_PER_PAGE=15
+```
+
+---
 
 ## Manual Usage (Facade)
 

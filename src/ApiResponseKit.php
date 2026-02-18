@@ -7,6 +7,8 @@ namespace LaraHub\ApiResponseKit;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use LaraHub\ApiResponseKit\Formatters\ErrorFormatter;
 use LaraHub\ApiResponseKit\Formatters\ExceptionFormatter;
@@ -307,6 +309,78 @@ class ApiResponseKit
     }
 
     /**
+     * Create a paginated success response.
+     *
+     * Pagination metadata (current_page, last_page, per_page, total, etc.) is
+     * automatically extracted and placed inside meta.pagination. The data key
+     * contains only the current page items.
+     *
+     * Usage:
+     *   return ApiResponseKit::paginated(User::query()->latest()->paginate());
+     *   return ApiResponseKit::paginated(User::query()->latest()->paginate(15));
+     *
+     * @param LengthAwarePaginator|CursorPaginator $paginator
+     * @param string|null $message
+     * @param array<string, mixed> $meta
+     * @return JsonResponse
+     */
+    public function paginated(LengthAwarePaginator|CursorPaginator $paginator, ?string $message = null, array $meta = []): JsonResponse
+    {
+        $items = array_values($paginator->items());
+        $pagination = $this->extractPaginationMeta($paginator);
+        $responseData = $this->schema->buildPaginated($items, $pagination, $message, $meta);
+
+        return new JsonResponse($responseData, 200);
+    }
+
+    /**
+     * Get the default per-page value from config.
+     *
+     * Convenient helper for controllers so the per-page number stays
+     * in one place (config/api-response-kit.php → pagination.per_page).
+     *
+     * Usage:
+     *   User::query()->latest()->paginate(ApiResponseKit::perPage());
+     *
+     * @return int
+     */
+    public function perPage(): int
+    {
+        return $this->config->getDefaultPerPage();
+    }
+
+    /**
+     * Extract pagination metadata from a paginator instance.
+     *
+     * @param LengthAwarePaginator|CursorPaginator $paginator
+     * @return array<string, mixed>
+     */
+    protected function extractPaginationMeta(LengthAwarePaginator|CursorPaginator $paginator): array
+    {
+        if ($paginator instanceof LengthAwarePaginator) {
+            return [
+                'current_page'  => $paginator->currentPage(),
+                'last_page'     => $paginator->lastPage(),
+                'per_page'      => $paginator->perPage(),
+                'total'         => $paginator->total(),
+                'from'          => $paginator->firstItem(),
+                'to'            => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ];
+        }
+
+        // CursorPaginator
+        return [
+            'per_page'      => $paginator->perPage(),
+            'next_cursor'   => $paginator->nextCursor()?->encode(),
+            'prev_cursor'   => $paginator->previousCursor()?->encode(),
+            'next_page_url' => $paginator->nextPageUrl(),
+            'prev_page_url' => $paginator->previousPageUrl(),
+        ];
+    }
+
+    /**
      * Get the current request ID.
      *
      * @return string
@@ -330,11 +404,18 @@ class ApiResponseKit
     /**
      * Normalize data for response.
      *
+     * Paginators are converted via toArray() so the middleware can detect
+     * and reformat them into the proper paginated response shape.
+     *
      * @param mixed $data
      * @return mixed
      */
     protected function normalizeData(mixed $data): mixed
     {
+        if ($data instanceof LengthAwarePaginator || $data instanceof CursorPaginator) {
+            return $data->toArray();
+        }
+
         if ($data instanceof Model) {
             return $data->toArray();
         }
