@@ -197,7 +197,33 @@ API_RESPONSE_KIT_PER_PAGE=15
 ```php
 use LaraHub\ApiResponseKit\Facades\ApiResponseKit;
 
-return ApiResponseKit::success(['user' => $user], 'User fetched');
+// Success responses
+ApiResponseKit::success($data, 'User fetched');          // 200
+ApiResponseKit::created($data, 'Resource created');      // 201
+ApiResponseKit::accepted($data, 'Request accepted');     // 202
+ApiResponseKit::noContent();                             // 204
+
+// Error responses
+ApiResponseKit::badRequest('Invalid input', $errors);    // 400
+ApiResponseKit::unauthorized('Please log in');           // 401
+ApiResponseKit::forbidden('Access denied');              // 403
+ApiResponseKit::notFound('Resource not found');          // 404
+ApiResponseKit::methodNotAllowed();                      // 405
+ApiResponseKit::conflict('Duplicate entry', $errors);   // 409
+ApiResponseKit::unprocessableEntity('Failed', $errors); // 422
+ApiResponseKit::tooManyRequests();                       // 429
+ApiResponseKit::serverError('Oops', $errors);           // 500
+ApiResponseKit::serviceUnavailable();                   // 503
+
+// Validation errors
+ApiResponseKit::validationError($errors, 'Validation failed');
+
+// Exceptions
+ApiResponseKit::exception($throwable);
+
+// Request ID
+$id = ApiResponseKit::getRequestId();
+ApiResponseKit::setRequestId('my-trace-id');
 ```
 
 ---
@@ -269,7 +295,7 @@ For safety/backwards-compatibility, per-type overrides should extend the built-i
 ### Folder Structure
 
 ```text
-ApiResponseKit/
+api-response-kit/
 ├── config/
 │   └── api-response-kit.php
 ├── src/
@@ -290,6 +316,12 @@ ApiResponseKit/
 │       ├── ResponseSchema.php
 │       ├── RequestIdGenerator.php
 │       └── ConfigResolver.php
+├── tests/
+│   ├── TestCase.php
+│   ├── SuccessFormatterTest.php
+│   ├── ErrorFormatterTest.php
+│   └── MiddlewareTest.php
+├── phpunit.xml
 ├── composer.json
 └── README.md
 ```
@@ -308,6 +340,78 @@ ApiResponseKit/
 | `RequestIdGenerator` | Generate unique request IDs |
 | `ConfigResolver` | Resolve configuration values dynamically |
 | `ApiResponseKit` (Facade) | Manual response control when automatic formatting is not desired |
+
+---
+
+## Testing
+
+The package ships with a PHPUnit test suite powered by **[Orchestra Testbench](https://github.com/orchestral/testbench)**, which boots a real Laravel application for each test.
+
+### Requirements
+
+| Dependency | Version |
+|---|---|
+| `phpunit/phpunit` | `^10.0 \| ^11.0` |
+| `orchestra/testbench` | `^8.0 \| ^9.0 \| ^10.0` |
+
+Install dev dependencies (first time only):
+
+```bash
+composer install
+```
+
+### Run the Test Suite
+
+```bash
+./vendor/bin/phpunit
+```
+
+Or via the `composer test` script if you add one:
+
+```bash
+# composer.json → scripts
+"test": "vendor/bin/phpunit"
+```
+
+```bash
+composer test
+```
+
+### Test Structure
+
+| File | What it covers |
+|---|---|
+| `tests/TestCase.php` | Base class — boots the service provider, registers the facade, enables debug mode |
+| `tests/SuccessFormatterTest.php` | `SuccessFormatter`, `ApiResponseKit::success/created/accepted/noContent/paginated`, request ID helpers, data normalisation |
+| `tests/ErrorFormatterTest.php` | `ErrorFormatter`, `ValidationFormatter`, `ExceptionFormatter`, all `ApiResponseKit` error/HTTP-status helpers |
+| `tests/MiddlewareTest.php` | `ApiResponseKitMiddleware` — pass-through conditions, success wrapping, pagination detection, error/validation formatting, exception catching |
+
+### Test Environment
+
+The base `TestCase` pre-configures the following for every test:
+
+```php
+$app['config']->set('app.env', 'testing');
+$app['config']->set('app.debug', true);
+$app['config']->set('api-response-kit.debug.show_trace', true);
+$app['config']->set('api-response-kit.debug.hide_sql_errors', false);
+```
+
+Each test method receives a **fresh application instance**, so config overrides in one test cannot bleed into another.
+
+### Example: Override Config Per Test
+
+```php
+public function test_exception_hides_details_in_production(): void
+{
+    $this->app['config']->set('api-response-kit.debug.show_trace', false);
+
+    $data = $this->kit->exception(new \RuntimeException('secret'))->getData(true);
+
+    $this->assertSame('An unexpected error occurred', $data['message']);
+    $this->assertNull($data['errors']);
+}
+```
 
 ---
 
